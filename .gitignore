@@ -1,0 +1,7 @@
+*~
+*.pyc
+*/*.pyc
+
+venv
+
+html/output/localhost.json

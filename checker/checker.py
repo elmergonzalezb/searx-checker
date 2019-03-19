@@ -1,8 +1,12 @@
 from urllib.parse import urlencode, urlparse
-from sys import argv, exit, stdout, stderr
+from sys import exit, stdout, stderr
+from json import dumps
 import collections
-
+import argparse
 import requests
+import calendar
+import datetime
+
 
 EngineResult = collections.namedtuple('EngineResult', ['status', 'error'])
 
@@ -85,23 +89,25 @@ def _check_results(results):
     return EngineResult(True, None)
 
 
-def get_instance_url_from_params(argv):
-    if len(argv) == 2:
-        return argv[1]
-    print('Invalid arguments', file=stderr)
-    exit(1)
-
-
-def get_engines(url):
+def get_config(url):
     resp = requests.get(url + CONFIG_API_ENDPOINT)
     if resp.status_code != 200:
         print('Error get ', CONFIG_API_ENDPOINT, ', status code=',resp.status_code)
         exit(2)
-    config = resp.json()
+    return resp.json()
+
+
+def get_engines(config):
     if 'engines' in config:
         return config['engines']
     print('Error while getting the engines', file=stderr)
     exit(2)
+
+
+def get_version(config):
+    if 'version' in config:
+        return config['version']
+    return None
 
 
 def _construct_url(instance_url, query_string, shortcut):
@@ -166,7 +172,12 @@ def check_engines_state(instance_url, engines):
     return engines_state
 
 
-def print_intro(instance_url, engines_number):
+def print_intro(instance_url, engines_number, version):
+    if version is None:
+        print('Searx version : unknown')
+    else:
+        print('Searx version : {}'.format(version))
+
     if engines_number == 1:
         print('Testing {} engine of {}'.format(engines_number, instance_url))
     elif engines_number > 1:
@@ -182,16 +193,38 @@ def print_report(instance_url, engines_state):
     print('You might want to check these manually...')
 
 
-def main():
-    instance_url = get_instance_url_from_params(argv)
-    engines = get_engines(instance_url)
+def write_report(instance_url, version, engines_state, file_name):
+    output = {
+        "timestamp": calendar.timegm(datetime.datetime.now().utctimetuple()),
+        "version": version,
+        "instance_url": instance_url,
+        "engines_state": {e[0]: { "status": e[1].status, "error": e[1].error }  for e in engines_state }
+    }
 
-    print_intro(instance_url, len(engines))
+    output_json = dumps(output, sort_keys=True, indent=4, ensure_ascii=False)
+
+    with open(file_name, 'w') as outfile:
+        outfile.write(output_json)
+
+
+def main(instance_url, file_name):
+    config = get_config(instance_url)
+    engines = get_engines(config)
+    version = get_version(config)
+
+    print_intro(instance_url, len(engines), version)
 
     state = check_engines_state(instance_url, engines)
 
     print_report(instance_url, state)
 
+    if file_name is not None:
+        write_report(instance_url, version, state, file_name)
+
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('url', metavar='URL', type=str, help='searx URL')
+    parser.add_argument('-o', type=str, nargs='?', help='JSON file will contains the results')
+    args = parser.parse_args()
+    main(args.url, args.o)
