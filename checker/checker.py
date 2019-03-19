@@ -1,8 +1,10 @@
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from sys import argv, exit, stdout, stderr
+import collections
 
 import requests
 
+EngineResult = collections.namedtuple('EngineResult', ['status', 'error'])
 
 CONFIG_API_ENDPOINT = '/config'
 
@@ -25,12 +27,23 @@ ENGINE_QUERY = {
 }
 
 
-def is_url_image(image_url):
+def _is_url(url):
+    try:
+        result = urlparse(url)
+        return True
+    except Exception as e:
+        return False
+
+
+def _is_url_image(image_url):
     if image_url.startswith('//'):
         image_url='https:' + image_url
 
     if image_url.startswith('data:'):
         return image_url.startswith('data:image/')
+
+    if not _is_url(image_url):
+        return False
 
     try:
         r = requests.head(image_url, allow_redirects=True)
@@ -45,11 +58,10 @@ def is_url_image(image_url):
                 return True
             return False
         except Exception as e2:
-            print(e)
             return False
 
 
-def check_result(result):
+def _check_result(result):
     template=result.get('template', 'default.html')
     if template == 'default.html':
         return True
@@ -60,17 +72,17 @@ def check_result(result):
     if template == 'map.html':
         return True
     if template == 'images.html':
-        return is_url_image(result.get('thumbnail_src'))
+        return _is_url_image(result.get('thumbnail_src'))
     if template == 'videos.html':
-        return is_url_image(result.get('thumbnail'))
+        return _is_url_image(result.get('thumbnail'))
     return True
 
 
-def check_results(results):
+def _check_results(results):
     for result in results:
-        if not check_result(result):
-            return False
-    return True
+        if not _check_result(result):
+            return EngineResult(False, "Engine returns an unavailable thumbnail URL")
+    return EngineResult(True, None)
 
 
 def get_instance_url_from_params(argv):
@@ -107,21 +119,21 @@ def _check_response(resp):
     resp_json = resp.json()
 
     if 'error' in resp_json and resp_json['error'] == 'search error':
-        return False
+        return EngineResult(False, resp_json['error'][0][1])
     if 'unresponsive_engines' in resp_json and len(resp_json['unresponsive_engines']) > 0:
-        return False
+        return EngineResult(False, resp_json['unresponsive_engines'][0][1])
 
     if 'results' in resp_json and len(resp_json['results']) != 0:
-        return check_results(resp_json['results'])
+        return _check_results(resp_json['results'])
     if 'answers' in resp_json and len(resp_json['answers']) != 0:
-        return True
+        return EngineResult(True, None)
     if 'infoboxes' in resp_json and len(resp_json['infoboxes']) != 0:
-        return True
+        return EngineResult(True, None)
 
-    return False
+    return EngineResult(False, "No result")
 
 
-def _is_engine_result_provided(instance_url, engine, query_string):
+def _query_engine_result(instance_url, engine, query_string):
     url = _construct_url(instance_url, query_string, engine['shortcut'])
     resp = requests.get(url)
     print('.', end='')
@@ -136,13 +148,13 @@ def _request_results(instance_url, engine):
     query_strings = QUERY_STRINGS.get(query_strings_key)
 
     for query in query_strings:
-        provides_results = _is_engine_result_provided(instance_url, engine, query)
-        if provides_results:
+        engine_result = _query_engine_result(instance_url, engine, query)
+        if engine_result.status:
             print('OK')
-            return True
+            return engine_result
 
-    print('ERROR')
-    return False
+    print('ERROR', engine_result.error)
+    return engine_result
 
 
 def check_engines_state(instance_url, engines):
@@ -164,9 +176,9 @@ def print_intro(instance_url, engines_number):
 
 def print_report(instance_url, engines_state):
     print('\nEngines of {url} not returning results:'.format(url=instance_url))
-    for engine_name, returns_resuts in engines_state:
-        if not returns_resuts:
-            print('{name}'.format(name=engine_name))
+    for engine_name, engine_result in engines_state:
+        if not engine_result.status:
+            print('{name}: {error}'.format(name=engine_name, error=engine_result.error))
     print('You might want to check these manually...')
 
 

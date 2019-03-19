@@ -31,12 +31,12 @@ python3 checker/checker.py http://localhost:8888
 Testing 5 engines of http://localhost:8888
 google.OK
 bing.OK
-gitlab......ERROR
-vimeo......ERROR
+gitlab......ERROR No result
+vimeo......ERROR unexpected crash: list index out of range
 twitter.OK
 
 Engines of http://localhost:8888 not returning results:
-gitlab
-vimeo
+gitlab: No result
+vimeo: unexpected crash: list index out of range
 You might want to check these manually...
 ```
