@@ -5,7 +5,72 @@ import requests
 
 
 CONFIG_API_ENDPOINT = '/config'
-QUERY_STRINGS = ['test', '1+1', '10 usd in eur', 'savant', 'bbc.com', 'en-ru apple']
+
+QUERY_STRINGS = {
+    '*': ['test', 'savant', 'bbc.com' ],
+    'normal': [ 'test', 'savant' ],
+    'currency': [ '10 usd in eur' ],
+    'translate' : [ 'en-ru apple' ],
+    'map' : [ 'paris' ],
+    'calc' : [ '1/x' ]
+    }
+
+ENGINE_QUERY = {
+    'dictzone': 'translate',
+    'mymemory translated': 'translate',
+    'currency': 'currency',
+    'photon' : 'map',
+    'openstreetmap': 'map',
+    'wolframalpha': 'calc'
+}
+
+
+def is_url_image(image_url):
+    if image_url.startswith('//'):
+        image_url='https:' + image_url
+
+    if image_url.startswith('data:'):
+        return image_url.startswith('data:image/')
+
+    try:
+        r = requests.head(image_url, allow_redirects=True)
+        if r.headers["content-type"].startswith('image/'):
+            return True
+        return False
+    except Exception as e:
+        # some server doesn't support HEAD
+        try:
+            r = requests.get(image_url, allow_redirects=True)
+            if r.headers["content-type"].startswith('image/'):
+                return True
+            return False
+        except Exception as e2:
+            print(e)
+            return False
+
+
+def check_result(result):
+    template=result.get('template', 'default.html')
+    if template == 'default.html':
+        return True
+    if template == 'code.html':
+        return True
+    if template == 'torrent.html':
+        return True
+    if template == 'map.html':
+        return True
+    if template == 'images.html':
+        return is_url_image(result.get('thumbnail_src'))
+    if template == 'videos.html':
+        return is_url_image(result.get('thumbnail'))
+    return True
+
+
+def check_results(results):
+    for result in results:
+        if not check_result(result):
+            return False
+    return True
 
 
 def get_instance_url_from_params(argv):
@@ -17,6 +82,9 @@ def get_instance_url_from_params(argv):
 
 def get_engines(url):
     resp = requests.get(url + CONFIG_API_ENDPOINT)
+    if resp.status_code != 200:
+        print('Error get ', CONFIG_API_ENDPOINT, ', status code=',resp.status_code)
+        exit(2)
     config = resp.json()
     if 'engines' in config:
         return config['engines']
@@ -37,14 +105,20 @@ def _check_response(resp):
         exit(3)
 
     resp_json = resp.json()
-    if 'results' in resp_json and len(resp_json['results']) == 0:
-        if 'answers' in resp_json and len(resp_json['answers']) != 0:
-            return True
-        return False
+
     if 'error' in resp_json and resp_json['error'] == 'search error':
         return False
+    if 'unresponsive_engines' in resp_json and len(resp_json['unresponsive_engines']) > 0:
+        return False
 
-    return True
+    if 'results' in resp_json and len(resp_json['results']) != 0:
+        return check_results(resp_json['results'])
+    if 'answers' in resp_json and len(resp_json['answers']) != 0:
+        return True
+    if 'infoboxes' in resp_json and len(resp_json['infoboxes']) != 0:
+        return True
+
+    return False
 
 
 def _is_engine_result_provided(instance_url, engine, query_string):
@@ -58,7 +132,10 @@ def _is_engine_result_provided(instance_url, engine, query_string):
 def _request_results(instance_url, engine):
     print(engine['name'], end='')
 
-    for query in QUERY_STRINGS:
+    query_strings_key = ENGINE_QUERY.get(engine['name'], '*')
+    query_strings = QUERY_STRINGS.get(query_strings_key)
+
+    for query in query_strings:
         provides_results = _is_engine_result_provided(instance_url, engine, query)
         if provides_results:
             print('OK')
@@ -70,7 +147,7 @@ def _request_results(instance_url, engine):
 
 def check_engines_state(instance_url, engines):
     engines_state = list()
-    for engine in engines:
+    for engine in sorted(engines, key=lambda engine: engine['name']):
         provides_results = _request_results(instance_url, engine)
         engines_state.append((engine['name'], provides_results))
 
