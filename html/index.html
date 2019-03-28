@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -7,39 +7,49 @@
     <title>searx-checker result</title>
     <link href="assets/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T">
     <script src="assets/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"></script>
+    <script src="assets/vue.min.js"></script>
   </head>
   <body>
     <div id="searxchecker">
-      <nav class="navbar navbar-dark bg-dark">
-	<span class="navbar-brand mb-0 h1">Searx checker : <template v-if="json.instance_url==='http://localhost:8888'">git master</template><template v-else>{{json.instance}}</template> ( {{json.version }} ) </span>
-	<span class="navbar-brand mb-0 h2">{{ new Date(json.timestamp * 1000).toString() }}</<span>
-      </nav>
-
-      <div class="container">
-      <table class="table table-bordered table-striped">
-	<thead>
-	  <tr>
-	    <th style="width: 16.66%">Engine</th>
-	    <th>Status</th>
-	    <th>Links</th>
-	  </tr>
-	</thead>
-	<tr v-for="(engine, engine_name) in json.engines_state">
-	  <td>{{engine_name}}</td>
-	  <td v-if="engine.status"><span class="badge badge-success">OK</span></td>
-	  <td v-else><span class="badge badge-danger">Error : {{engine.error}}</span></td>
-	  <td><a :href="'https://github.com/asciimoo/searx/issues?utf8=%E2%9C%93&q=' + `${encodeURIComponent(':is issue :open ') }%22` + engine_name + '%22'">Opened issues</a>,
-	      <a :href="'https://github.com/asciimoo/searx/issues?utf8=%E2%9C%93&q=' + `${encodeURIComponent(':is pr :open ') }%22` + engine_name + '%22'">Opened PR</a></td>
-	</tr>
-      </table>
-      </div>
+      <header>
+        <nav class="navbar navbar-dark bg-dark">
+          <span class="navbar-brand mb-0 h1">Searx checker :
+              <template v-if="json.instance_url==='http://localhost:8888'">git master</template>
+              <template v-else>{{json.instance}}</template>
+              ( {{json.version }} )
+          </span>
+          <span class="navbar-brand mb-0 h2" v-if="json.timestamp">{{ new Date(json.timestamp * 1000).toString() }}</<span>
+        </nav>
+      </header>
+      <main role="main">
+        <div class="container">
+          <p>Result of <a href="https://github.com/searx/searx-checker">searx checker</a></p>
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th style="width:16%">Engine</th>
+                <th>Status</th>
+                <th>Links</th>
+              </tr>
+            </thead>
+            <tr v-for="(engine, engine_name) in json.engines_state">
+              <td>{{engine_name}}</td>
+              <td v-if="engine.status"><span class="badge badge-success">OK</span></td>
+              <td v-else><span class="badge badge-danger">Error : {{engine.error}}</span></td>
+              <td><a :href="'https://github.com/asciimoo/searx/issues?utf8=%E2%9C%93&q=' + `${encodeURIComponent('is:issue ') }%22` + engine_name + '%22'">Issues</a>,
+                  <a :href="'https://github.com/asciimoo/searx/issues?utf8=%E2%9C%93&q=' + `${encodeURIComponent('is:pr ') }%22` + engine_name + '%22'">PR</a></td>
+            </tr>
+          </table>
+        </div>
+      </main>
     </div>
-    <script src="assets/vue.min.js"></script>    
     <script>
       new Vue({
         el: '#searxchecker',
         data: () => ({
-          json: {},
+          json: {
+            timestamp: undefined
+          },
         }),
         created: function() {
           fetch('output/localhost.json').then((response) => {
@@ -49,6 +59,6 @@
           })
         }
       })
-    </script>    
+    </script>
   </body>
 </html>
