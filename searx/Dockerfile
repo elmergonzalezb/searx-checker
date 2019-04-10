@@ -22,7 +22,7 @@ RUN apk -U upgrade \
     libxslt \
     openssl \
  && mkdir /usr/local/searx && cd /usr/local \
- && git clone https://github.com/asciimoo/searx.git\
+ && git clone --depth=1 https://github.com/asciimoo/searx.git\
  && cd searx\
  && pip install --upgrade setuptools \
  && pip install --no-cache -r requirements.txt \
