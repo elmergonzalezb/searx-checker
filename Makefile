@@ -4,11 +4,13 @@ OUTPUT_FILENAME=localhost.json
 
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
+DOCKER_INTERACTIVE_PARAM:=$(shell [ -t 0 ] && echo " -t -i")
+
 build: ## Build the container
 	docker build -t $(APP_NAME) .
 
 run: ## Run container
-	docker run -i -t --rm --network=host -v $(ROOT_DIR)/html/output:/opt/searx-checker/html/output --name="$(APP_NAME)" $(APP_NAME) -o html/output/$(OUTPUT_FILENAME) $(SEARX_URL)
+	docker run $(DOCKER_INTERACTIVE_PARAM) --rm --network=host -v $(ROOT_DIR)/html/output:/opt/searx-checker/html/output --name="$(APP_NAME)" $(APP_NAME) -o html/output/$(OUTPUT_FILENAME) $(SEARX_URL)
 
 runmaster:
 	$(MAKE) -C searx build
