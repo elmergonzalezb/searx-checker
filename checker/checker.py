@@ -197,7 +197,6 @@ def write_report(instance_url, version, engines_state, file_name):
     output = {
         "timestamp": calendar.timegm(datetime.datetime.now().utctimetuple()),
         "version": version,
-        "instance_url": instance_url,
         "engines_state": {e[0]: { "status": e[1].status, "error": e[1].error }  for e in engines_state }
     }
 

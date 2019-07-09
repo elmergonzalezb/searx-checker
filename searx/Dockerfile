@@ -19,14 +19,16 @@ RUN apk -U upgrade \
     python3 \
     libxml2 \
     libxslt \
-    openssl \
- && mkdir /usr/local/searx && cd /usr/local \
- && git clone --depth=1 https://github.com/asciimoo/searx.git\
+    openssl
+
+RUN mkdir /usr/local/searx && cd /usr/local \
+ && git clone -b master --single-branch https://github.com/asciimoo/searx.git\
  && cd searx\
  && pip3 install --upgrade setuptools \
  && pip3 install --no-cache -r requirements.txt \
  && sed -i "s/127.0.0.1/0.0.0.0/g" searx/settings.yml \
- && echo "VERSION_STRING = VERSION_STRING + '.$(git log --format="%H" -n 1)'" >> searx/version.py \
+ && SEARX_GIT_VERSION=$(git describe --match "v[0-9]*\.[0-9]*\.[0-9]*" HEAD 2>/dev/null | awk -F'-' '{OFS="-"; $1=substr($1, 2); $3=substr($3, 2); print}') \
+ && echo "VERSION_STRING = '$SEARX_GIT_VERSION'" >> searx/version.py \
  && apk del build-dependencies \
  && rm -f /var/cache/apk/*
 

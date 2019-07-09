@@ -1,7 +1,8 @@
 APP_NAME=searx_master
 
 build:
-	docker rmi -f $(APP_NAME):latest
+	docker stop $(APP_NAME):latest || true
+	docker rmi -f $(APP_NAME):latest || true
 	docker rm -f $(APP_NAME) || true
 	docker build -t $(APP_NAME) .
 
