@@ -13,8 +13,7 @@ EngineResult = collections.namedtuple('EngineResult', ['status', 'error'])
 CONFIG_API_ENDPOINT = '/config'
 
 QUERY_STRINGS = {
-    '*': ['test', 'savant', 'bbc.com' ],
-    'normal': [ 'test', 'savant' ],
+    '*': ['time', 'test', 'savant', 'bbc.com' ],
     'currency': [ '10 usd in eur' ],
     'translate' : [ 'en-ru apple' ],
     'map' : [ 'paris' ],
