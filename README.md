@@ -13,7 +13,7 @@ In case of older searx versions the engines `currency` return error when in fact
 ```
 git clone git@github.com:kvch/searx-checker.git
 cd searx-checker
-vitualenv -p python3 venv
+virtualenv -p python3 venv
 source venv/bin/activate
 pip3 install -r requirements.txt
 ```
