@@ -14,7 +14,7 @@ To make engines work correctly as much as possible, please update the examined `
 
 ## Installation
 
-```
+```zsh
 git clone git@github.com:searx/searx-checker.git
 cd searx-checker
 mkdir -p html/data
@@ -86,6 +86,44 @@ proxy / localhost:4004 {
   except /searx-checker/html/data/status.json
 }
   ```
+  
+## systemd timers
+
+`systemd` offers a modern built-in cron-like job scheduler with `systemd timers`.
+
+```zsh
+vim /etc/systemd/system/searx-checker.timer
+```
+
+```systemd
+[Unit]
+Description=Daily update of the engine statistics of your public Searx instance
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Please replace below *instance_url* by the URL of your Searx instance.
+  
+```zsh
+vim /etc/systemd/system/searx-checker.service
+```
+
+```systemd
+[Unit]
+Description=searx-checker status renewal
+
+[Service]
+Type=oneshot
+User=http
+WorkingDirectory=/srv/http/searx-checker
+ExecStart=/srv/http/searx-checker/venv/bin/python3 checker/checker.py -o html/data/status.json instance_url
+```
   
 ## Docker
   
